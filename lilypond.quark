@@ -1,0 +1,5 @@
+(
+	\name: 			"lilypond",
+	\summary:		"score generation for lilypond, work in progress",
+	\author: 		"Newton Armstrong"
+)
