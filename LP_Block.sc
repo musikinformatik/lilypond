@@ -1,18 +1,19 @@
 /* ---------------------------------------------------------------------------------------------------------------
-x = LP_Block('header');
-x.add('title', "Symphony No. 1");
-x.override('NoteHead.font-size', 12);
-x.items;
-x.lpStr;
+• LP_Block
+
+- !!TODO: pass objects into storage containers (items, overrides, etc.), not their lpStrs
+- !!TODO: storage containers must be IdentityDictionaries, to ensure against duplication of keys/settings
+- !!TODO: add a method for inserting any arbitrary string into lpStr
 --------------------------------------------------------------------------------------------------------------- */
 LP_Block {
-	var name, <items, <overrides, <commands, <contextBlocks;
+	var <>name, <items, <overrides, <commands, <contextBlocks;
 	*new { |name|
 		^super.new.init(name);
 	}
 	init { |argName|
 		name = argName;
 		items = OrderedIdentitySet[];
+		//items = IdentityDictionary[]; //!! see note above
 		overrides = OrderedIdentitySet[];
 		commands = OrderedIdentitySet[];
 		contextBlocks = OrderedIdentitySet[];
@@ -35,16 +36,13 @@ LP_Block {
 		items.do { |assoc| str = str ++ "\n\t" ++ assoc.key + "=" + assoc.value.asString };
 		overrides.do { |assoc| str = str ++ "\n\t\\override" + assoc.key + "=" + assoc.value.asString };
 		commands.do { |command| str = str ++ "\n\t\\" ++ command.asString };
-		contextBlocks.do { |each| str = str ++ each.lpStr };
+		contextBlocks.do { |each| str = str ++ each.lpStr(indent: 1) };
 		str = str ++ "\n}";
 		^str;
 	}
 }
 /* ---------------------------------------------------------------------------------------------------------------
-x = LP_ContextBlock('Score');
-x.add('title', "Symphony No. 1");
-x.override('NoteHead.font-size', 12);
-x.lpStr;
+• LP_ContextBlock
 --------------------------------------------------------------------------------------------------------------- */
 LP_ContextBlock : LP_Block {
 	var contextName;
@@ -54,61 +52,127 @@ LP_ContextBlock : LP_Block {
 	init { |argContextName|
 		contextName = argContextName;
 	}
-	lpStr {
+	lpStr { |indent=0|
 		var str;
-		str = "\n\t\\context {";
-		str = str ++ "\n\t\t\\Score";
-		items.do { |assoc| str = str ++ "\n\t\t" ++ assoc.key + "=" + assoc.value };
-		overrides.do { |assoc| str = str ++ "\n\t\t\\override" + assoc.key + "=" + assoc.value.asString };
-		commands.do { |command| str = str ++ "\n\t\t\\" ++ command.asString };
-		str = str ++ "\n\t}";
+		str = "\n\\context {";
+		str = str ++ "\n\t\\Score";
+		items.do { |assoc| str = str ++ "\n\t" ++ assoc.key + "=" + assoc.value };
+		overrides.do { |assoc| str = str ++ "\n\t\\override" + assoc.key + "=" + assoc.value.asString };
+		commands.do { |command| str = str ++ "\n\t\\" ++ command.asString };
+		str = str ++ "\n}";
+		if (indent > 0) { str = str.replace("\n", "\n".catList("\t" ! indent)) };
 		^str;
 	}
 }
 /* ---------------------------------------------------------------------------------------------------------------
-LP_LayoutBlock().lpStr;
+• LP_LayoutBlock
 --------------------------------------------------------------------------------------------------------------- */
 LP_LayoutBlock : LP_Block {
+	var <indent, <raggedRight, <raggedBottom, <raggedLast;
 	*new {
 		^super.new('layout');
 	}
+	indent_ { |dimension|
+		indent = if (dimension.isNumber) { LP_Dimension(dimension) } { dimension };
+		this.add('indent', indent.lpStr);
+	}
+	raggedRight_ { |bool|
+		raggedRight = bool;
+		this.add('ragged-right', raggedRight.lpStr);
+	}
+	raggedBottom_ { |bool|
+		raggedBottom = bool;
+		this.add('ragged-bottom', raggedBottom.lpStr);
+	}
+	raggedLast_ { |bool|
+		raggedLast = bool;
+		this.add('ragged-last', raggedLast.lpStr);
+	}
 }
-
+/* ---------------------------------------------------------------------------------------------------------------
+• LP_PaperBlock
+--------------------------------------------------------------------------------------------------------------- */
 LP_PaperBlock : LP_Block {
-	var <left_margin, <right_margin, <top_margin, <bottom_margin, <score_system_spacing;
+	var <leftMargin, <rightMargin, <topMargin, <bottomMargin;
+	var <systemSystemSpacing, <scoreSystemSpacing;
+	var <systemCount, <pageCount;
+	var <indent, <raggedRight, <raggedBottom, <raggedLast;
 	*new {
 		^super.new('paper');
 	}
-	left_margin_ { |dimension|
-		left_margin = dimension;
-		this.add('left-margin', left_margin);
+	leftMargin_ { |dimension|
+		leftMargin = if (dimension.isNumber) { LP_Dimension(dimension) } { dimension };
+		this.add('left-margin', leftMargin.lpStr);
 	}
-	right_margin_ { |dimension|
-		right_margin = dimension;
-		this.add('right-margin', right_margin);
+	rightMargin_ { |dimension|
+		rightMargin = if (dimension.isNumber) { LP_Dimension(dimension) } { dimension };
+		this.add('right-margin', rightMargin.lpStr);
 	}
-	top_margin_ { |dimension|
-		top_margin = dimension;
-		this.add('top-margin', top_margin);
+	topMargin_ { |dimension|
+		topMargin = if (dimension.isNumber) { LP_Dimension(dimension) } { dimension };
+		this.add('top-margin', topMargin.lpStr);
 	}
-	bottom_margin_ { |dimension|
-		bottom_margin = dimension;
-		this.add('bottom-margin', bottom_margin);
+	bottomMargin_ { |dimension|
+		bottomMargin = if (dimension.isNumber) { LP_Dimension(dimension) } { dimension };
+		this.add('bottom-margin', bottomMargin.lpStr);
 	}
-	score_system_spacing_ { |spacingVector|
-		score_system_spacing = spacingVector;
-		this.add('score-system-spacing', score_system_spacing);
+	margin_ { |left=10, top=10, right=10, bottom=10|
+		this.leftMargin_(left).topMargin_(top).rightMargin_(right).bottomMargin_(bottom);
+	}
+	systemSystemSpacing_ { |basicDistance, minimumDistance, padding, stretchability|
+		systemSystemSpacing = LP_SpacingVector(basicDistance, minimumDistance, padding, stretchability);
+		this.add('system-system-spacing', systemSystemSpacing.lpStr);
+	}
+	scoreSystemSpacing_ { |basicDistance, minimumDistance, padding, stretchability|
+		scoreSystemSpacing = LP_SpacingVector(basicDistance, minimumDistance, padding, stretchability);
+		this.add('score-system-spacing', scoreSystemSpacing.lpStr);
+	}
+	systemCount_ { |num|
+		systemCount = num;
+		this.add('system-count', systemCount.asString);
+	}
+	pageCount_ { |num|
+		pageCount = num;
+		this.add('page-count', pageCount.asString);
+	}
+	indent_ { |dimension|
+		indent = if (dimension.isNumber) { LP_Dimension(dimension) } { dimension };
+		this.add('indent', indent.lpStr);
+	}
+	raggedRight_ { |bool|
+		raggedRight = bool;
+		this.add('ragged-right', raggedRight.lpStr);
+	}
+	raggedBottom_ { |bool|
+		raggedBottom = bool;
+		this.add('ragged-bottom', raggedBottom.lpStr);
+	}
+	raggedLast_ { |bool|
+		raggedLast = bool;
+		this.add('ragged-last', raggedLast.lpStr);
+	}
+	lpStr { |indent=0|
+		var str;
+		str = "\\" ++ name.asString + "{";
+		items.do { |assoc| str = str ++ "\n\t" ++ assoc.key + "=" + assoc.value };
+		str = str ++ "\n}";
+		if (indent > 0) { str = str.replace("\n", "\n".catList("\t" ! indent)) };
+		^str;
 	}
 }
-
+/* ---------------------------------------------------------------------------------------------------------------
+• LP_HeaderBlock
+--------------------------------------------------------------------------------------------------------------- */
 LP_HeaderBlock : LP_Block {
-	/*var <dedication, <title, <subtitle, <subsubtitle, <instrument, <poet, <composer;
-	var <meter, <arranger, <tagline, <copyright;*/
+	var <dedication, <title, <subtitle, <subsubtitle, <instrument, <poet, <composer;
+	var <meter, <arranger, <tagline, <copyright;
 	*new {
 		^super.new('header');
 	}
-	/*add { |key, element|
-		if (element.isString) { element = LP_Markup(element) };
+	add { |key, element|
+		element = if (element.isKindOf(LP_Markup) || element.isKindOf(Boolean)) {
+			element.lpStr(indent: 1);
+		} { element.asString.quote };
 		super.add(key, element);
 	}
 	dedication_ { |argDedication|
@@ -154,34 +218,40 @@ LP_HeaderBlock : LP_Block {
 	copyright_ { |argCopyright|
 		copyright = argCopyright;
 		this.add('copyright', copyright);
-	}*/
+	}
 }
-
+/* ---------------------------------------------------------------------------------------------------------------
+• LP_Dimension
+LP_Dimension(2, 'in').lpStr;
+LP_Dimension(2).lpStr;
+- unit must be: \mm, \cm, \in, \pt
+--------------------------------------------------------------------------------------------------------------- */
 LP_Dimension {
 	var <value, <unit;
 	*new { |value, unit|
 		^super.new.init(value, unit);
 	}
 	init { |argValue, argUnit|
-		value = argValue;
-		unit = argUnit;
+		value = argValue.asString;
+		if (argUnit.notNil) { unit = argUnit.asString };
 	}
 	lpStr {
-		^(value.asString ++ "\\" ++ unit.asString);
+		^if (unit.isNil) { value } { value ++ "\\" ++ unit };
 	}
 }
 /* ---------------------------------------------------------------------------------------------------------------
+• LP_SpacingVector
 see: http://www.lilypond.org/doc/v2.19/Documentation/notation/flexible-vertical-spacing-paper-variables
 LP_SpacingVector(12, 17, 48, 9).lpStr;
 --------------------------------------------------------------------------------------------------------------- */
 LP_SpacingVector {
-	var <basic_distance, <minimum_distance, <padding, <stretchability;
-	*new { |basic_distance=0, minimum_distance=0, padding=12, stretchability=0|
-		^super.new.init(basic_distance, minimum_distance, padding, stretchability);
+	var <basicDistance, <minimumDistance, <padding, <stretchability;
+	*new { |basicDistance=0, minimumDistance=0, padding=12, stretchability=0|
+		^super.new.init(basicDistance, minimumDistance, padding, stretchability);
 	}
-	init { |argBasic_distance, argMinimum_distance, argPadding, argStretchability|
-		basic_distance = argBasic_distance;
-		minimum_distance = argMinimum_distance;
+	init { |argBasicDistance, argMinimumDistance, argPadding, argStretchability|
+		basicDistance = argBasicDistance;
+		minimumDistance = argMinimumDistance;
 		padding = argPadding;
 		stretchability = argStretchability;
 	}
@@ -189,10 +259,10 @@ LP_SpacingVector {
 		var str, keys;
 		keys = #["basic-distance", "minimum-distance", "padding", "stretchability"];
 		str = "#'(";
-		[basic_distance, minimum_distance, padding, stretchability].do { |value, i|
-			str = str ++ "(" ++ keys[i] + "." + value ++ ")";
+		[basicDistance, minimumDistance, padding, stretchability].do { |value, i|
+			str = str + "(" ++ keys[i] + "." + value ++ ")";
 		};
-		str = str ++ ")";
+		str = str + ")";
 		^str;
 	}
 }

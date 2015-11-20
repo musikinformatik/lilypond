@@ -1,43 +1,67 @@
 /* ---------------------------------------------------------------------------------------------------------------
 • LP_Markup
-- TODO: should this be a subclass of LP_Indicator ??
+- position: \above, \below
+- x, y: Number, \left, \center, \right, \up, \down
 
-|string, position, align, xoffset, yoffset|
+x = LP_Markup("foobar", \above, \center, 2.5);
+x.font_(Font("Helvetica", 12, bold: false, italic: true));
+x.bold_(true);
+x.color_(Color.grey);
+x.lpStr;
 --------------------------------------------------------------------------------------------------------------- */
-LP_Markup : LP_Indicator {
-	var decorators, <lyObj="Markup";
-	lpStr {
-		var str;
-		decorators = [];
-		str = this.posStr(position) ++ "\\markup {";
-		if (decorators.notNil) { decorators.do { |decoratorStr| str = str + decoratorStr } };
-		str = str + string.asCompileString + "}";
+LP_Markup : LP_Object {
+	var <string, <position, <x, <y;
+	var <decorators, <font, <>component;
+	*new { |string, position, x, y|
+		^super.new.init(string, position, x, y);
+	}
+	init { |argString, argPosition, argX, argY|
+		string = argString;
+		position = argPosition;
+		x = argX;
+		y = argY;
+		decorators = OrderedIdentitySet[];
+	}
+	lpStr { |indent=0|
+		var str="";
+		// only add position str if LP_Markup is attached to a LP_Leaf
+		if (component.isKindOf(LP_Leaf)) { str = "\n" ++ switch(position, \above, "^", \below, "_", nil, "-") };
+		str = str ++ "\\markup {";
+		if (x.notNil) { str = str ++ "\n\t\\general-align #X #" ++ x.asString.toUpper };
+		if (y.notNil) { str = str ++ "\n\t\\general-align #Y #" ++ y.asString.toUpper };
+		if (font.notNil) {
+			str = str ++ "\n\t\\override #'(font-name ." + font.name.toLower.quote ++ ")";
+			this.size_(font.size).bold_(font.bold).italic_(font.italic);
+		};
+		decorators.do { |decoratorStr| str = str ++ "\n\t" ++ decoratorStr };
+		str = str ++ "\n\t" ++ string.quote ++ "\n}";
+		if (indent > 0) { str = str.replace("\n", "\n".catList("\t" ! indent)) };
 		^str;
 	}
-	bold {
-		decorators = decorators.add("\\bold");
+	font_ { |argFont|
+		font = argFont;
 	}
-	italic {
+	size_ { |size|
+		//if (font.notNil) { font.size_(size) };
+		decorators = decorators.add("\\abs-fontsize #" ++ size.asString);
+	}
+	bold_ { |bool|
+		//if (font.notNil) { font.bold_(bool) };
+		if (bool) { decorators = decorators.add("\\bold") };
+	}
+	italic_ { |bool|
+		//if (font.notNil) { font.italic_(bool) };
 		decorators = decorators.add("\\italic");
 	}
-	caps {
-		decorators = decorators.add("\\caps");
+	box_ { |bool|
+		if (bool) { decorators = decorators.add("\\box") };
 	}
-	//!!! remove -- go with a single override method
-	font_name { |name|
-		decorators = decorators.add("\\override #'(font-name ." + name.asCompileString + ")");
-	}
-	fontsize { |size|
-		decorators = decorators.add("\\fontsize #" ++ size.asString);
-	}
-	box {
-		decorators = decorators.add("\\box");
-	}
-	pad_around { |padding|
+	padding_ { |padding|
 		decorators = decorators.add("\\pad-around #" ++ padding.asString);
 	}
-	with_color { |color|
-		decorators = decorators.add("\\with-color #" ++ color.asString);
+	color_ { |color|
+		var rgb = [color.red, color.green, color.blue];
+		decorators = decorators.add("\\with-color #(rgb-color".scatList(rgb) ++")");
 	}
 }
 /* ---------------------------------------------------------------------------------------------------------------

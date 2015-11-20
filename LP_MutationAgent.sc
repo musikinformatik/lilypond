@@ -4,8 +4,9 @@
 --------------------------------------------------------------------------------------------------------------- */
 + LP_Selection {
 	remove {
+		var tieSelection;
 		if (components[0].isKindOf(LP_TieSelection)) {
-			var tieSelection = components[0];
+			tieSelection = components[0];
 			if (tieSelection.isTieContainer) { tieSelection.root.remove(tieSelection.parent) };
 		} {
 			components.do { |component| component.parent.remove(component) };
@@ -31,8 +32,8 @@
 		this.changed;
 	}
 	partition { |ratio, notes|
+		var newComponents, component, tuplet;
 		if (this.componentsAreInSameParent) {
-			var newComponents, component, tuplet;
 			component = components[0];
 			tuplet = LP_Tuplet(this.preProlatedDuration, ratio.collect { |dur|
 				if (dur.isPositive) { component.shallowClone.preProlatedDuration_(dur) } { LP_Rest(dur) };
@@ -169,7 +170,7 @@
 			spanners = leaf.spanners;
 			if (spanners.notNil) { spanners.removeAllSuchThat { |spanner| spanner.isKindOf(LP_Beam) } };
 		};
-		beamStructure = beamStructure.offsets.min(this.size).removeDuplicates.intervals;
+		beamStructure = beamStructure.offsets.min(this.size).as(OrderedIdentitySet).asArray.intervals;
 		selections = (0..(beamStructure.sum - 1)).clumps(beamStructure);
 		selections = selections.collect { |indices| LP_Selection(components[indices]) };
 		selections.do { |each|  each.attach(LP_Beam()) };

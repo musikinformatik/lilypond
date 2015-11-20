@@ -1,29 +1,3 @@
-//!!! TODO
-LP_PitchEvent {}
-
-//!!! TODO
-LP_Event {}
-
-//!!! TODO: rest-delimited LP_PitchEvent clumps; rename: LP_PitchEventGroup, LP_PitchEventChunk or similar ??
-LP_Run {}
-
-//!!! TODO
-LP_SelectionInventory {
-	var <selections;
-	*new { |selections|
-		^super.new.init(selections);
-	}
-	init { |argSelections|
-		selections = argSelections;
-	}
-	at { |index|
-		^selections[index];
-	}
-	// use doesNotUnderstand to perform LP_Selection methods on a collection of LP_Selections
-	doesNotUnderstand { |selector ... args|
-		selections.do { |selection| selection.perform(selector, *args) };
-	}
-}
 /* ---------------------------------------------------------------------------------------------------------------
 • LP_Selection
 --------------------------------------------------------------------------------------------------------------- */
@@ -36,22 +10,9 @@ LP_Selection {
 		components = argComponents;
 		components.do { |component| this.addDependant(component.root) }; // root is each LP_Measure in the selection
 	}
-	//!!! set of dependants needs to be updated for each change to the content of components
-	//!!! this avoids orphaned dependancy couplings
-	at { |indices|
-		if (indices.isNumber) { indices = [indices] };
-		components = components.atAll(indices);
-	}
-	copySeries { |first, second, last|
-		components = components.copySeries(first, second, last);
-	}
-	copyRange { |start, end|
-		components = components.copyRange(start, end);
-	}
 	selectBy { |class|
 		components = if (class.isArray) {
 			components.select { |node| class.includes(node.class) }; //!!! BROKEN
-			//components.postln;
 		} {
 			switch(class,
 				LP_Leaf, {
@@ -89,6 +50,11 @@ LP_Selection {
 					elems = this.selectBy(LP_Event).components.reject { |item| item.type == LP_Rest };
 					components = elems;
 				},
+				LP_RestEvent, {
+					var elems;
+					elems = this.selectBy(LP_Event).components.select { |item| item.type == LP_Rest };
+					components = elems;
+				},
 				/* !! TODO
 				a = LP_Measure([5, 16], [1, 2, 1, 4, -2, 3, 4, -1, 4, -3], [62, 63, 64, 65]);
 				a.selectBy(LP_Run).selections.do { |each| each.components.postln };
@@ -106,18 +72,36 @@ LP_Selection {
 	}
 	attach { |attachment|
 		if (attachment.isKindOf(LP_Spanner)) {
-			if (attachment.isKindOf(LP_Tie)) {
+			/*if (attachment.isKindOf(LP_Tie)) {
 				components.drop(-1).do { |each| each.isTiedToNext_(true) };
 				components[1..].do { |each| each.isTiedToPrev_(true) };
-			};
+			};*/
 			components.do { |each| each.attach(attachment) };
 			attachment.components_(components);
 		} {
-			components.do { |component| component.attach(attachment) };
+			components.do { |each| each.attach(attachment) };
 		};
 	}
 	override { |key, value|
 		components.do { |component| component.override(key, value) };
+	}
+	/* -----------------------------------------------------------------------------------------------------------
+	• Collection adapters
+	a = LP_Measure([4, 4], [1, -1, 1, 4.0], [61, [60, 64, 67, 70]]);
+	a.selectBy(LP_Leaf).do { |e, i| [e, i].postln };
+
+	a = LP_Measure([4, 4], [1, -1, 1, 4.0], [61, [60, 64, 67, 70]]);
+	a.selectBy(LP_Leaf).collect { |e, i| e }.components
+	----------------------------------------------------------------------------------------------------------- */
+	at { |indices|
+		if (indices.isNumber) { indices = [indices] };
+		components = components.atAll(indices);
+	}
+	copySeries { |first, second, last|
+		components = components.copySeries(first, second, last);
+	}
+	copyRange { |start, end|
+		components = components.copyRange(start, end);
 	}
 	first {
 		^components.first;
@@ -127,6 +111,18 @@ LP_Selection {
 	}
 	size {
 		^components.size;
+	}
+	do { |func|
+		components.do(func);
+	}
+	collect { |func|
+		components = components.collect(func);
+	}
+	select { |func|
+		components = components.select(func);
+	}
+	reject { |func|
+		components = components.reject(func);
 	}
 	/* -----------------------------------------------------------------------------------------------------------
 	• properties
@@ -184,10 +180,10 @@ LP_Selection {
 --------------------------------------------------------------------------------------------------------------- */
 LP_ContiguousSelection : LP_Selection {
 	attach { |attachment|
-		if (attachment.isKindOf(LP_Tie)) {
+		/*if (attachment.isKindOf(LP_Tie)) {
 			components.drop(-1).do { |each| each.isTiedToNext_(true) };
 			components[1..].do { |each| each.isTiedToPrev_(true) };
-		};
+		};*/
 		components.do { |each| each.attach(attachment) };
 		attachment.components_(components);
 	}
@@ -264,6 +260,40 @@ LP_TieSelection : LP_ContiguousSelection {
 	// for use in LP_Player
 	type {
 		^components[0].class;
+	}
+}
+
+/* ---------------------------------------------------------------------------------------------------------------
+• TODO
+--------------------------------------------------------------------------------------------------------------- */
+LP_Event {
+}
+
+LP_PitchEvent {
+}
+
+LP_RestEvent {
+}
+
+LP_Run {
+}
+/* ---------------------------------------------------------------------------------------------------------------
+• TODO: LP_SelectionInventory
+--------------------------------------------------------------------------------------------------------------- */
+LP_SelectionInventory {
+	var <selections;
+	*new { |selections|
+		^super.new.init(selections);
+	}
+	init { |argSelections|
+		selections = argSelections;
+	}
+	at { |index|
+		^selections[index];
+	}
+	// use doesNotUnderstand to perform LP_Selection methods on a collection of LP_Selections
+	doesNotUnderstand { |selector ... args|
+		selections.do { |selection| selection.perform(selector, *args) };
 	}
 }
 /* ---------------------------------------------------------------------------------------------------------------

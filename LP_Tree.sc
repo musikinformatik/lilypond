@@ -7,8 +7,8 @@ LP_Node {
 		parent = argParent;
 	}
 	parents {
+		var temp, parents;
 		^if (parent.isNil) { [] } {
-			var temp, parents;
 			parents = [parent];
 			temp = parent;
 			while { temp = temp.parent; temp.notNil } { parents = [temp] ++ parents };
@@ -80,7 +80,6 @@ LP_Container : LP_Node {
 	removeAll { |nodes|
 		nodes.do { |node| this.remove(node) };
 	}
-
 	append { |newNode|
 		children = children.add(newNode);
 		newNode.addParent(this);
