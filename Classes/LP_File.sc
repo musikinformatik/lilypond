@@ -12,8 +12,8 @@ LP_Config {
 		if (File.exists(dir).not) { unixCmd("mkdir" + dir.shellQuote) };
 	}
 	*version {
+		var str;
 		^version ?? {
-			var str;
 			str = (LP_Config.bin + "--version").unixCmdGetStdOut;
 			str.copyRange(*[str.findRegexp("\\s[0-9]")[0][0]+1, str.find("\n")-1]);
 		};

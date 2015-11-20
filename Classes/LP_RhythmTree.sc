@@ -294,15 +294,17 @@ LP_Measure : LP_FixedDurationContainer {
 	}
 	// get the next measure in this voice
 	nextMeasure {
+		var node;
 		^if (parentVoice.notNil) {
-			var node = parentVoice.measures.findNodeOfObj(this).next;
+			node = parentVoice.measures.findNodeOfObj(this).next;
 			if (node.notNil) { node.obj }
 		};
 	}
 	// get the previous measure in this voice
 	prevMeasure {
+		var node;
 		^if (parentVoice.notNil) {
-			var node = parentVoice.measures.findNodeOfObj(this).prev;
+			node = parentVoice.measures.findNodeOfObj(this).prev;
 			if (node.notNil) { node.obj };
 		};
 	}

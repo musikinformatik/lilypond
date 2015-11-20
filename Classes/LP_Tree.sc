@@ -7,8 +7,8 @@ LP_Node {
 		parent = argParent;
 	}
 	parents {
+		var temp, parents;
 		^if (parent.isNil) { [] } {
-			var temp, parents;
 			parents = [parent];
 			temp = parent;
 			while { temp = temp.parent; temp.notNil } { parents = [temp] ++ parents };
