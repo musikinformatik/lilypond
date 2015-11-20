@@ -80,7 +80,6 @@ LP_Container : LP_Node {
 	removeAll { |nodes|
 		nodes.do { |node| this.remove(node) };
 	}
-
 	append { |newNode|
 		children = children.add(newNode);
 		newNode.addParent(this);

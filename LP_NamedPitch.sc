@@ -25,11 +25,39 @@ x = LP_NamedPitch('Db-6');
 x.note;
 x.noteName;
 --------------------------------------------------------------------------------------------------------------- */
+LP_NamedPitch {
+	var <note, <noteName;
+	*new { |pitch|
+		^if (pitch.isString || pitch.isKindOf(Symbol)) {
+			if (pitch.asString.findRegexp("[0-9]").notEmpty) { this.newBySCStr(pitch) } { this.newByLPStr(pitch) }
+		} { this.newByMidinote(pitch) };
+	}
+	*newByMidinote { |note|
+		^super.new.init(note, LP_NoteLib.[note]);
+	}
+	*newByLPStr { |str|
+		^super.new.init(LP_NoteLib.[str.asSymbol], str.asString);
+	}
+	*newBySCStr { |str|
+		str = LP_NamedPitchParser(str);
+		^super.new.init(LP_NoteLib.[str.asSymbol], str.asString);
+
+	}
+	init { |argNote, argNoteName|
+		note = argNote;
+		noteName = argNoteName;
+	}
+	asLP_Note { |note|
+		^LP_Note(note);
+	}
+}
+
 LP_NamedPitchParser {
 	*new { |inStr|
 		var noteName, modifier, register, dict, outStr;
 		inStr = inStr.asString.toLower;
 
+		// recurse if inStr contains more than one token
 		if (inStr.contains(" ")) {
 			outStr = "";
 			inStr = inStr.separate { |char| char.isSpace }.collect { |each| each.stripWhiteSpace };
@@ -60,33 +88,6 @@ LP_NamedPitchParser {
 	}
 }
 
-LP_NamedPitch {
-	var <note, <noteName;
-	*new { |pitch|
-		^if (pitch.isString || pitch.isKindOf(Symbol)) {
-			if (pitch.asString.findRegexp("[0-9]").notEmpty) { this.newBySCStr(pitch) } { this.newByLPStr(pitch) }
-		} { this.newByMidinote(pitch) };
-	}
-	*newByMidinote { |note|
-		^super.new.init(note, LP_NoteLib.[note]);
-	}
-	*newByLPStr { |str|
-		^super.new.init(LP_NoteLib.[str.asSymbol], str.asString);
-	}
-	*newBySCStr { |str|
-		str = LP_NamedPitchParser(str);
-		^super.new.init(LP_NoteLib.[str.asSymbol], str.asString);
-
-	}
-	init { |argNote, argNoteName|
-		note = argNote;
-		noteName = argNoteName;
-	}
-	asLP_Note { |note|
-		^LP_Note(note);
-	}
-}
-
 // TODO
 LP_NoteHead {
 	var <client;
@@ -114,28 +115,23 @@ LP_NoteHead {
 - used in LP_Measure initialisation and by LP_Selection::replaceNotes
 - tokens must be separated by spaces
 
-LP_StringParser("cs' g df' f bs'''");
-LP_StringParser("<c' f'' fss''>");
-LP_StringParser("cs' df' ff'' <c'' e' g'> bf''' <c'' f, f' e g'> d,,").printAll; "";
-
-x = "A0 C#1 Db2 C##3 E+4 B-4 Bb-5 C#+6";
-LP_NamedPitchParser(x);
-LP_StringParser(x).printAll; "";
-
-y = "A0 C#1 Db2 <A0 C#1 Db2>";
-LP_NamedPitchParser(y);
-LP_StringParser(y).printAll; "";
+LP_StringParser("ef' <c' eqs' gs' bf'>").printAll; ""
+LP_StringParser("Eb4 <C4 E+4 G#4 Bb4>").printAll; ""
 --------------------------------------------------------------------------------------------------------------- */
 LP_StringParser {
 	*new { |string|
-		var out, indices;
+		var out, indices, chord;
 		out = [];
-		if (string.findRegexp("[0-9]+").notEmpty) { string = LP_NamedPitchParser(string) }; // convert SC to LP
-		indices = string.findRegexp("<[a-zA-Z\'\,\ ]*>"); // get chords
-		indices.do { |each| out = out.add([each[0], LP_StringParser(each[1][1..(each[1].lastIndex-1)])]) };
+		indices = string.findRegexp("<[a-zA-Z0-9\'\,\ #+\-]*>"); // get chords
+		indices.do { |each|
+			chord = each[1].separate { |char| char.isSpace };
+			chord = chord.collect { |str| str.replace("<", "").replace(">", "").stripWhiteSpace };
+			chord = chord.collect  { |str| LP_NamedPitch(str).noteName };
+			out = out.add([each[0], chord]);
+		};
 		indices.do { |each| string = string.replace(each[1], "@" ! each[1].size) }; // remove chords from string
-		indices = string.findRegexp("[a-zA-Z]+[\'\,]*"); // get notes
-		indices.do { |each| out = out.add(each) };
+		indices = string.findRegexp("[a-zA-Z]+[\'\,\ #+\-]*[0-9]*"); // get notes
+		indices.do { |each| out = out.add([each[0], LP_NamedPitch(each[1]).noteName]) };
 		out = out.sort { |a, b| a[0] < b[0] }.flop[1];
 		^out;
 	}

@@ -46,21 +46,29 @@ LP_TimeSignature
 LP_TimeSignatureInventory
 LP_Tremolo
 LP_Tuning
+
+position: \above, \below
+x, y: Number, \left, \center, \right, \up, \down
 --------------------------------------------------------------------------------------------------------------- */
 LP_Indicator : LP_Object {
-	var <string, position, align, xoffset, yoffset;
-	*new { |string, position, align, xoffset, yoffset|
-		^super.new.init(string, position, align, xoffset, yoffset);
+	var <string, position, x, y;
+	var <>component;
+	*new { |string, position, x, y|
+		^super.new.init(string, position, x, y);
 	}
-	init { |argString, argPosition, argAlign, argXoffset, argYoffset|
+	init { |argString, argPosition, argX, argY|
 		string = argString;
 		position = argPosition;
-		align = argAlign;
-		xoffset = argXoffset;
-		yoffset = argYoffset;
+		x = argX;
+		y = argY;
 	}
 	posStr { |position|
 		^switch(position, \above, "^", \below, "_", nil, "-");
+	}
+	formatStr { |obj, indent=0|
+		var str="";
+		if (x.notNil) { str = str ++ "\\general-align #X #" ++ x.asString };
+		if (y.notNil) { str = str ++ "\\general-align #Y #" ++ x.asString };
 	}
 }
 

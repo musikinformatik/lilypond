@@ -96,10 +96,16 @@ LP_RhythmTreeLeaf : LP_Leaf {
 	}
 	//!!! move up to LP_Object and inherit
 	attach { |attachment|
-		if (attachment.isKindOf(LP_Indicator)) {
+		case
+		{ attachment.isKindOf(LP_Indicator) } {
 			indicators = indicators.add(attachment);
-			//!!! if (attachment.isKindOf(LP_Dynamic)) { this.dynamic_(attachment.string.asSymbol) };
-		} {
+			attachment.component_(this);
+		}
+		{ attachment.isKindOf(LP_Markup) } {
+			markups = markups.add(attachment);
+			attachment.component_(this);
+		}
+		{ attachment.isKindOf(LP_Spanner) } {
 			// do not attach spanner if an instance of the same type is already attached
 			if (spanners.detect { |elem| elem.isKindOf(attachment.class) }.isNil) {
 				spanners = spanners.add(attachment);
